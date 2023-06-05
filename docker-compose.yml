@@ -1,0 +1,152 @@
+version: '3'
+
+networks:
+  bd-project-network:
+
+services:
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra-node
+    ports:
+      - "9042:9042"
+    networks:
+      - bd-project-network
+
+    # volumes:
+    #   - ./ddl.cql:/ddl.cql
+    # command: bash -c "sleep 50s && cqlsh -f /ddl.cql"
+    healthcheck:
+      test: ["CMD", "cqlsh -e 'DESC KEYSPACES;'"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper-server
+    ports:
+      - "2181:2181"
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - bd-project-network
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka-server
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-server:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    networks:
+      - bd-project-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  # spark:
+  #   image: docker.io/bitnami/spark:3
+  #   networks:
+  #     - bd-project-network
+  #   environment:
+  #     - SPARK_MODE=master
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+  #   ports:
+  #     - 2020:2020
+  
+  # spark-worker:
+  #   image: docker.io/bitnami/spark:3
+  #   networks:
+  #     - bd-project-network
+  #   environment:
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark:7077
+  #     - SPARK_WORKER_MEMORY=1G
+  #     - SPARK_WORKER_CORES=1
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+
+
+  write-cassandra:
+    image: write-cassandra:1.0
+    # build: .
+    build:
+      context: .
+      args:
+        - NODE_ENV=local
+      dockerfile: from_kafka_to_cassandra/Dockerfile
+    container_name: write-cassandra
+    hostname: localhost
+    ports:
+      - 8000:8000
+    networks:
+      - bd-project-network
+    depends_on:
+    # - kafka
+    # - cassandra
+      kafka:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+  
+
+  write-kafka:
+    image: write-kafka:1.0
+    build:
+      context: .
+      args:
+        - NODE_ENV=local
+      dockerfile: kafka-related/Dockerfile
+    container_name: write-kafka
+    hostname: localhost
+    ports:
+      - 8080:8080
+    networks:
+      - bd-project-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    # - kafka
+    # - cassandra
+      # kafka:
+      #   condition: service_healthy
+      # cassandra: {}
+
+
+  api_a:
+    image: api-a-image:1.0
+    build:
+      context: .
+      args:
+        - NODE_ENV=local
+      dockerfile: api_A/Dockerfile
+    container_name: api-a-container
+    hostname: localhost
+    ports:
+      - 4848:4848
+    networks:
+      - bd-project-network
+    depends_on:
+      - cassandra
+      # kafka:
+      #   condition: service_healthy
+      # cassandra:
+      #   condition: service_healthy
