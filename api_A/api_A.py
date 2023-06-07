@@ -3,56 +3,65 @@ from pyspark.sql import SparkSession
 # from pyspark.sql.types import StructType, StringType, BooleanType
 from datetime import datetime, timedelta
 from flask import Flask, jsonify
+from confluent_kafka import TopicPartition, DeserializingConsumer, Producer
 
+import json
 from pyspark.sql.streaming import *
 from pyspark.sql.functions import *
 
 
 app = Flask(__name__)
 
-spark = SparkSession.builder.appName("StatisticsWikimedia").getOrCreate()
 
 
-
-# df.select(upper(col("value")).alias("value"))\
-#     .writeStream \
-#     .format("kafka") \
-#     .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
-#     .option("topic", output_topic_name) \
-#     .option("checkpointLocation", "/opt/app/kafka_checkpoint").start().awaitTermination()
+kafka_bootstrap_servers = "kafka-server:9092"
+input_topic_name = "request-topic"
+output_topic_name = "response-topic"
 
 
+global REQID
+REQID = 0
 
 @app.route('/statistics/pages_by_domain', methods=['GET'])
 def get_pages_by_domain():
-    end_time = datetime.now().replace(minute=0, second=0, microsecond=0)
-    start_time = end_time - timedelta(hours=6)
-    statistics = []
+    producer = Producer({'bootstrap.servers': kafka_bootstrap_servers})
 
-    time_range = []
-    # curr_time = start_time
-    current_hour = start_time
-    while current_hour < end_time:
-        next_hour = (current_hour + timedelta(hours=1)) if (current_hour + timedelta(hours=1)) <= end_time else end_time
-        time_range.append({"time_start": current_hour, "time_end": next_hour})
-        statistics.append(df.filter((df.rev_timestamp >= current_hour) & (df.rev_timestamp < next_hour))
-                          .groupBy("domain")
-                          .count()
-                          .collect())
+    global REQID
+    message = {"function": 'get_pages_by_domain', "request_id": REQID}
+    REQID += 1
 
-        current_hour = next_hour
+    producer.produce(input_topic_name, value=json.dumps(message))
+    producer.flush()
 
-        # curr_time += timedelta(hours=1)
+    offset = 0
+    while True:
+        # configure    
+        configuration = {'bootstrap.servers': kafka_bootstrap_servers,
+                        'group.id': "kafka",
+                        'auto.offset.reset': 'earliest',
+                        'isolation.level':'read_committed'}
+        consumer = DeserializingConsumer(configuration)
+        
+        partition = 0
+        partition = TopicPartition(output_topic_name, partition, offset)
+        consumer.assign([partition])
+        consumer.seek(partition)
 
-        response = []
-        for i in range(len(time_range)):
-            response.append({"time_start": time_range[i]["time_start"], "time_end": time_range[i]["time_end"],
-                            "statistics": [{row["domain"]: row["count"]} for row in statistics[i]]})
+    # read the message
+        while True:
+            message = consumer.poll(1.0)
 
-        return jsonify(response)
+            if message is None:
+                continue
+            if message.error():
+                print('Error: {}'.format(message.error()))
+                continue
+            else:
+                data = json.loads(message.value().decode('utf-8'))
 
+                if data['request_id'] == REQID - 1:
+                    return data['response'], data['code']
 
-    # return jsonify(statistics)
 
 
 
@@ -83,42 +92,12 @@ def get_pages_by_domain():
 
 
 
-# def is_within_hour(message, hour):
-#     timestamp = message['timestamp'] // 1000  # Convert milliseconds to seconds
-#     message_time = datetime.fromtimestamp(timestamp)
-#     return hour <= message_time < (hour + timedelta(hours=1))
-
-
-# def is_bot_created_page(message):
-#     performer = message['performer']
-#     return performer.get('user_is_bot', False)
-
 
 if __name__ == '__main__':
 
-    # schema = StructType() \
-    #         .add("timestamp", StringType()) \
-    #         .add("domain", StringType()) \
-    #         .add("performer", StructType()
-    #             .add("user_is_bot", BooleanType()))
-
-    df = spark.read.format("org.apache.spark.sql.cassandra").options(table="pages_by_domain", keyspace="wiki").load()
+    app.run(host='0.0.0.0')
 
 
-    # messages_stream = spark \
-    #     .readStream \
-    #     .format("kafka") \
-    #     .option("kafka.bootstrap.servers", kafka_bootstrap_servers) \
-    #     .option("subscribe", input_topic_name) \
-    #     .option("startingOffsets", "earliest") \
-    #     .load()
 
 
-    # Start the query to consume messages
-    # query = messages_stream.writeStream \
-    #     .format("console") \
-    #     .outputMode("append") \
-    #     .start()
-
-    app.run(host='0.0.0.0', port=5000)
 

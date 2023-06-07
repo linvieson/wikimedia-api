@@ -43,7 +43,6 @@ if __name__ == '__main__':
     client = CassandraClient(host='cassandra-node', port=9042, keyspace='wiki')
     client.connect()
 
-
     # Process messages from Kafka consumer
     for message in consumer:
         value = message.value
