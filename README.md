@@ -4,7 +4,7 @@
 
 This is a system consisting of several servers, which main idea is to provide an API for the user to get statistics on the data from [WikiMedia](https://stream.wikimedia.org/v2/stream/page-create).
 
-The system is supposed to have two kinds of APIs, let API A and API B.
+The system has two kinds of APIs, let API A and API B.
 
 ## **Architecture**
 
@@ -34,8 +34,8 @@ You can now send the requests for the provided API endpoints. There are two ways
 
 ## **Results**
 
-There supposed to be two APIs implemented, although, due to problems with Spark, there is only one API in real life.
+There are two APIs implemented, each one having its own logic, but working within the same system.
 
-You can see the ideal image of how system would look like in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/data_manipulations_v2/Wikimedia%20System%20Document.pdf) file.
+You can see the image of how system looks like in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/data_manipulations_v2/Wikimedia%20System%20Document.pdf) file.
 
 
