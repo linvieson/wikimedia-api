@@ -133,3 +133,18 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
 
+  api_b:
+    image: api-b-image:1.0
+    build:
+      context: .
+      args:
+        - NODE_ENV=local
+      dockerfile: api_B/Dockerfile
+    container_name: api-b-container
+    hostname: localhost
+    networks:
+      - bd-project-network
+    depends_on:
+      - cassandra
+    ports:
+      - 8010:8010
