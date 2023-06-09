@@ -11,13 +11,13 @@ The system has two kinds of APIs, let API A and API B.
 There are several servers processing the requests. The reliability of the system  is ensures by adding a queue of requests and repsonses.
 The availability of the system as far as its consistency may be questioned, though (you can experience that while using the API) :)
 
-The detailed design documentation can be found in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/data_manipulations_v2/Wikimedia%20System%20Document.pdf) file.
+The detailed design documentation can be found in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/develop/Wikimedia%20System%20Document.pdf) file.
 
 ## **Data models**
 
 The data is preserved in Cassandra database. The data is saved in a way that would be beneficial for getting faster responses for the API calls.
 
-The detailed data models description can be found in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/data_manipulations_v2/Wikimedia%20System%20Document.pdf) file.
+The detailed data models description can be found in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/develop/Wikimedia%20System%20Document.pdf) file.
 
 ## **Usage**
 
@@ -36,6 +36,6 @@ You can now send the requests for the provided API endpoints. There are two ways
 
 There are two APIs implemented, each one having its own logic, but working within the same system.
 
-You can see the image of how system looks like in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/data_manipulations_v2/Wikimedia%20System%20Document.pdf) file.
+You can see the image of how system looks like in the [Wikimedia System Document](https://gitlab.com/sadova_o/big-data-project/-/blob/develop/Wikimedia%20System%20Document.pdf) file.
 
 
