@@ -37,15 +37,13 @@ if __name__ == '__main__':
                 if 'data:' in data:
                     data_dict = {}
 
-                    for field in ['domain', 'rev_timestamp']:
+                    for field in ['domain', 'rev_timestamp', 'page_title']:
                         data_dict[field] = extract_str(data, field)
 
                     for field in ['page_id', 'user_id']:
                         data_dict[field] = extract_data(data, field)
 
                     data_dict['user_is_bot'] = bool(extract_data(data, 'user_is_bot'))
-
-                    # row = json.dumps(data_dict).encode('utf-8')
 
                     producer.send('wiki-topic', value=data_dict)
 
