@@ -23,11 +23,12 @@ class CassandraClient:
         return self.session.execute(query)
 
     def insert_into_table(self, table, values):
-        query = f"INSERT INTO {table} (uid, domain, rev_timestamp, user_is_bot, user_id) " "VALUES (?, ?, ?, ?, ?)"
-
-        # self.execute(query)
+        query = str()
+        if table == 'wiki.pages_by_domain' or table == 'wiki.pages_by_user':
+            query = f"INSERT INTO {table} (uid, domain, rev_timestamp, user_is_bot, user_id) " "VALUES (?, ?, ?, ?, ?)"
+        elif table == 'wiki.pages_by_timestamp':
+            query = f"INSERT INTO {table} (uid, page_title, rev_timestamp, user_id) " "VALUES (?, ?, ?, ?)"
         self.session.execute(self.session.prepare(query), values)
-
 
 
 # Initialize Kafka consumer
@@ -49,13 +50,15 @@ if __name__ == '__main__':
         # Extract data from the message
         domain = value['domain']
         rev_timestamp = value['rev_timestamp']
+        page_title = value['page_title']
         page_id = value['page_id']
         user_id = value['user_id']
         user_is_bot = bool(value['user_is_bot'])
 
-        # Insert data into "pages_by_domain" table
-        print(page_id, domain, rev_timestamp, user_is_bot, user_id)
+        # Insert data into tables
+        client.insert_into_table("wiki.pages_by_user", [page_id, domain, rev_timestamp, user_is_bot, user_id])
         client.insert_into_table("wiki.pages_by_domain", [page_id, domain, rev_timestamp, user_is_bot, user_id])
+        client.insert_into_table("wiki.pages_by_timestamp", [page_id, page_title, rev_timestamp, user_id])
 
     # Close Cassandra connection
     client.close()
